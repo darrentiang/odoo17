@@ -1,3 +1,4 @@
+# ESMOS Odoo 17 - Custom Image v2
 FROM odoo:17.0
 
 # Switch to root user to perform administrative tasks
