@@ -5,12 +5,12 @@ on:
     types: [azure-monitor-alert]
   push:
     branches:
-      - staging
+      - Staging
       - master
 
 jobs:
   deploy-staging:
-    if: github.ref == 'refs/heads/staging'
+    if: github.ref == 'refs/heads/Staging'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
