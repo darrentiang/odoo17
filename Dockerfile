@@ -1,4 +1,4 @@
-# ESMOS Odoo Production - V5
+# ESMOS Odoo Production - V6
 FROM odoo:17.0
 
 USER root
