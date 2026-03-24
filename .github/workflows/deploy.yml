@@ -1,0 +1,41 @@
+name: Deploy ESMOS Odoo
+
+on:
+  repository_dispatch:
+    types: [azure-monitor-alert]
+  push:
+    branches:
+      - master
+ 
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: darrentiang0/esmos-odoo:latest
+
+      - name: Deploy to Staging
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: azureuser
+          key: ${{ secrets.STAGING_KEY }}
+          script: |
+            cd ~/esmos-odoo
+            docker pull darrentiang0/esmos-odoo:latest
+            docker-compose down
+            docker-compose up -d
