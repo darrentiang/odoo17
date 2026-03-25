@@ -12,6 +12,7 @@ jobs:
   deploy-staging:
     if: (github.ref == 'refs/heads/Staging' && github.event_name == 'push') || github.event.action == 'alert-staging'
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -43,24 +44,6 @@ jobs:
             darrentiang0/esmos-odoo:latest
             darrentiang0/esmos-odoo:${{ github.sha }}
 
-      - name: Rollback on Alert
-        if: github.event.action == 'alert-staging'
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.STAGING_HOST }}
-          username: azureuser
-          key: ${{ secrets.STAGING_KEY }}
-          script: |
-            cd ~/esmos-odoo
-            git fetch origin
-            PREV_SHA=$(git log origin/Staging --pretty=format:"%H" | sed -n '2p')
-            docker-compose down
-            docker pull darrentiang0/esmos-odoo:$PREV_SHA
-            sed -i "s|darrentiang0/esmos-odoo:.*|darrentiang0/esmos-odoo:$PREV_SHA|g" docker-compose.yml
-            docker-compose up -d
-            git revert HEAD --no-edit --message "[skip ci] Revert to $PREV_SHA"
-            git push origin Staging
-
       - name: Deploy to Staging
         if: github.event.action != 'alert-staging' && steps.check_commit.outputs.skip != 'true'
         uses: appleboy/ssh-action@v1.0.0
@@ -70,14 +53,50 @@ jobs:
           key: ${{ secrets.STAGING_KEY }}
           script: |
             cd ~/esmos-odoo
+
+            git pull origin Staging
+
+            if [ -f .current_version ]; then
+              cp .current_version .previous_version
+            fi
+
+            echo "${{ github.sha }}" > .current_version
+
             docker-compose down
             docker pull darrentiang0/esmos-odoo:${{ github.sha }}
-            sed -i "s|darrentiang0/esmos-odoo:.*|darrentiang0/esmos-odoo:${{ github.sha }}|g" docker-compose.yml
+
+            sed -i "s|image: darrentiang0/esmos-odoo:.*|image: darrentiang0/esmos-odoo:${{ github.sha }}|g" docker-compose.yml
+
+            docker-compose up -d
+
+      - name: Rollback on Alert
+        if: github.event.action == 'alert-staging'
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: azureuser
+          key: ${{ secrets.STAGING_KEY }}
+          script: |
+            cd ~/esmos-odoo
+
+            if [ ! -f .previous_version ]; then
+              echo "No previous version found, aborting rollback"
+              exit 1
+            fi
+
+            PREV_SHA=$(cat .previous_version)
+            echo "Rolling back to $PREV_SHA"
+            echo "$PREV_SHA" > .current_version
+
+            docker-compose down
+            docker pull darrentiang0/esmos-odoo:$PREV_SHA
+            sed -i "s|image: darrentiang0/esmos-odoo:.*|image: darrentiang0/esmos-odoo:$PREV_SHA|g" docker-compose.yml
             docker-compose up -d
 
   deploy-production:
-    if: (github.ref == 'refs/heads/master' && github.event_name == 'push')
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
