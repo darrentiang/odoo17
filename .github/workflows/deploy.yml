@@ -10,7 +10,7 @@ on:
 
 jobs:
   deploy-staging:
-    if: github.ref == 'refs/heads/Staging' || github.event.action == 'alert-staging'
+    if: (github.ref == 'refs/heads/Staging' && github.event_name == 'push') || github.event.action == 'alert-staging'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -39,7 +39,9 @@ jobs:
         with:
           context: .
           push: true
-          tags: darrentiang0/esmos-odoo:latest
+          tags: |
+            darrentiang0/esmos-odoo:latest
+            darrentiang0/esmos-odoo:${{ github.sha }}
 
       - name: Rollback on Alert
         if: github.event.action == 'alert-staging'
@@ -51,11 +53,13 @@ jobs:
           script: |
             cd ~/esmos-odoo
             git fetch origin
-            git revert HEAD --no-edit
-            git push origin Staging
+            PREV_SHA=$(git log origin/Staging --pretty=format:"%H" | sed -n '2p')
             docker-compose down
-            docker pull darrentiang0/esmos-odoo:latest
+            docker pull darrentiang0/esmos-odoo:$PREV_SHA
+            sed -i "s|darrentiang0/esmos-odoo:.*|darrentiang0/esmos-odoo:$PREV_SHA|g" docker-compose.yml
             docker-compose up -d
+            git revert HEAD --no-edit --message "[skip ci] Revert to $PREV_SHA"
+            git push origin Staging
 
       - name: Deploy to Staging
         if: github.event.action != 'alert-staging' && steps.check_commit.outputs.skip != 'true'
@@ -67,11 +71,12 @@ jobs:
           script: |
             cd ~/esmos-odoo
             docker-compose down
-            docker pull darrentiang0/esmos-odoo:latest
+            docker pull darrentiang0/esmos-odoo:${{ github.sha }}
+            sed -i "s|darrentiang0/esmos-odoo:.*|darrentiang0/esmos-odoo:${{ github.sha }}|g" docker-compose.yml
             docker-compose up -d
 
   deploy-production:
-    if: github.ref == 'refs/heads/master'
+    if: (github.ref == 'refs/heads/master' && github.event_name == 'push')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
