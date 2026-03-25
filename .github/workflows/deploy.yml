@@ -58,14 +58,14 @@ jobs:
               cp .current_version .previous_version
             fi
 
-            NEW_SHA=${{ github.sha }}
             echo "${{ github.sha }}" > .current_version
 
-            docker pull darrentiang0/esmos-odoo:$NEW_SHA
+            docker-compose down
+            docker pull darrentiang0/esmos-odoo:${{ github.sha }}
 
-            sed -i "s|image: darrentiang0/esmos-odoo:.*|image: darrentiang0/esmos-odoo:$NEW_SHA|g" docker-compose.yml
+            sed -i "s|image: darrentiang0/esmos-odoo:.*|image: darrentiang0/esmos-odoo:${{ github.sha }}|g" docker-compose.yml
 
-            docker-compose up -d --no-deps web
+            docker-compose up -d
 
       - name: Rollback on Alert
         if: github.event.action == 'alert-staging'
@@ -86,9 +86,10 @@ jobs:
             echo "Rolling back to $PREV_SHA"
             echo "$PREV_SHA" > .current_version
 
+            docker-compose down
             docker pull darrentiang0/esmos-odoo:$PREV_SHA
             sed -i "s|image: darrentiang0/esmos-odoo:.*|image: darrentiang0/esmos-odoo:$PREV_SHA|g" docker-compose.yml
-            docker-compose up -d --no-deps web
+            docker-compose up -d
 
   deploy-production:
     if: github.ref == 'refs/heads/master' && github.event_name == 'push'
