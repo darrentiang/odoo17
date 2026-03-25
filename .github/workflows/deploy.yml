@@ -2,7 +2,7 @@ name: Deploy ESMOS Odoo
 
 on:
   repository_dispatch:
-    types: [alert-staging]
+    types: [alert-staging, alert-prod]
   push:
     branches:
       - Staging
@@ -103,12 +103,23 @@ jobs:
             docker-compose up -d
 
   deploy-production:
-    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    if: (github.ref == 'refs/heads/master' && github.event_name == 'push') || github.event.action == 'alert-prod'
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Check commit message
+        if: github.event.action != 'alert-prod'
+        id: check_commit
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          if echo "$COMMIT_MSG" | grep -qi "revert"; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -121,9 +132,12 @@ jobs:
         with:
           context: .
           push: true
-          tags: darrentiang0/esmos-odoo:latest
+          tags: |
+            darrentiang0/esmos-odoo:latest
+            darrentiang0/esmos-odoo:${{ github.sha }}
 
       - name: Deploy to Production
+        if: github.event.action != 'alert-prod' && steps.check_commit.outputs.skip != 'true'
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.PRODUCTION_HOST }}
@@ -131,6 +145,50 @@ jobs:
           key: ${{ secrets.PRODUCTION_KEY }}
           script: |
             cd ~/esmos-odoo
+            if [ -f .current_version ]; then
+              cp .current_version .previous_version
+            fi
+            date +%s > .last_deploy_time
+
+            echo "${{ github.sha }}" > .current_version
+
             docker-compose down
-            docker pull darrentiang0/esmos-odoo:latest
+            docker pull darrentiang0/esmos-odoo:${{ github.sha }}
+
+            sed -i "s|image: darrentiang0/esmos-odoo:.*|image: darrentiang0/esmos-odoo:${{ github.sha }}|g" docker-compose.yml
+
+            docker-compose up -d
+
+      - name: Rollback on Alert
+        if: github.event.action == 'alert-prod'
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: azureuser
+          key: ${{ secrets.PRODUCTION_KEY }}
+          script: |
+            cd ~/esmos-odoo
+
+            if [ ! -f .previous_version ]; then
+              echo "No previous version found, aborting rollback"
+              exit 1
+            fi
+
+            if [ -f .last_deploy_time ]; then
+              LAST_DEPLOY=$(cat .last_deploy_time)
+              NOW=$(date +%s)
+              DIFF=$((NOW - LAST_DEPLOY))
+              if [ $DIFF -gt 600 ]; then
+                echo "Alert is not within 10 minutes of last deployment. Not rolling back."
+                exit 0
+              fi
+            fi
+
+            PREV_SHA=$(cat .previous_version)
+            echo "Rolling back to $PREV_SHA"
+            echo "$PREV_SHA" > .current_version
+
+            docker-compose down
+            docker pull darrentiang0/esmos-odoo:$PREV_SHA
+            sed -i "s|image: darrentiang0/esmos-odoo:.*|image: darrentiang0/esmos-odoo:$PREV_SHA|g" docker-compose.yml
             docker-compose up -d
