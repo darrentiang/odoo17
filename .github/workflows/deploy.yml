@@ -2,7 +2,7 @@ name: Deploy ESMOS Odoo
 
 on:
   repository_dispatch:
-    types: [azure-monitor-alert]
+    types: [alert-staging]
   push:
     branches:
       - Staging
@@ -10,11 +10,22 @@ on:
 
 jobs:
   deploy-staging:
-    if: github.ref == 'refs/heads/Staging'
+    if: github.ref == 'refs/heads/Staging' || github.event.action == 'alert-staging'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Check commit message
+        if: github.event.action != 'alert-staging'
+        id: check_commit
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          if echo "$COMMIT_MSG" | grep -qi "revert"; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -23,13 +34,31 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build and push Docker image
+        if: github.event.action != 'alert-staging' && steps.check_commit.outputs.skip != 'true'
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
           tags: darrentiang0/esmos-odoo:latest
 
+      - name: Rollback on Alert
+        if: github.event.action == 'alert-staging'
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: azureuser
+          key: ${{ secrets.STAGING_KEY }}
+          script: |
+            cd ~/esmos-odoo
+            git fetch origin
+            git revert HEAD --no-edit
+            git push origin Staging
+            docker-compose down
+            docker pull darrentiang0/esmos-odoo:latest
+            docker-compose up -d
+
       - name: Deploy to Staging
+        if: github.event.action != 'alert-staging' && steps.check_commit.outputs.skip != 'true'
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.STAGING_HOST }}
