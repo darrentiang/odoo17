@@ -57,15 +57,29 @@ jobs:
               cp .current_version .previous_version
             fi
             date +%s > .last_deploy_time
-
             echo "${{ github.sha }}" > .current_version
-
             docker-compose down
             docker pull darrentiang0/esmos-odoo:${{ github.sha }}
-
             sed -i "s|image: darrentiang0/esmos-odoo:.*|image: darrentiang0/esmos-odoo:${{ github.sha }}|g" docker-compose.yml
-
             docker-compose up -d
+
+      # ============ ADD THIS NEW STEP HERE ============
+      - name: Smoke Test Gate - Staging
+        if: github.event.action != 'alert-staging' && steps.check_commit.outputs.skip != 'true'
+        run: |
+          echo "Waiting 30s for Odoo to start..."
+          sleep 30
+          STATUS=$(curl -sk -o /dev/null -w "%{http_code}" https://odoo-staging.centralindia.cloudapp.azure.com)
+          echo "HTTP Status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "Smoke test FAILED — triggering rollback via Logic App"
+            curl -X POST "${{ secrets.LOGIC_APP_STAGING_URL }}" \
+              -H "Content-Type: application/json" \
+              -d '{"action": "alert-staging"}'
+            exit 1
+          fi
+          echo "Smoke test PASSED — Odoo is healthy"
+      # ============ END OF NEW STEP ============
 
       - name: Rollback on Alert
         if: github.event.action == 'alert-staging'
@@ -76,12 +90,10 @@ jobs:
           key: ${{ secrets.STAGING_KEY }}
           script: |
             cd ~/esmos-odoo
-
             if [ ! -f .previous_version ]; then
               echo "No previous version found, aborting rollback"
               exit 1
             fi
-
             if [ -f .last_deploy_time ]; then
               LAST_DEPLOY=$(cat .last_deploy_time)
               NOW=$(date +%s)
@@ -91,11 +103,9 @@ jobs:
                 exit 0
               fi
             fi
-
             PREV_SHA=$(cat .previous_version)
             echo "Rolling back to $PREV_SHA"
             echo "$PREV_SHA" > .current_version
-
             docker-compose down
             docker pull darrentiang0/esmos-odoo:$PREV_SHA
             sed -i "s|image: darrentiang0/esmos-odoo:.*|image: darrentiang0/esmos-odoo:$PREV_SHA|g" docker-compose.yml
@@ -149,15 +159,29 @@ jobs:
               cp .current_version .previous_version
             fi
             date +%s > .last_deploy_time
-
             echo "${{ github.sha }}" > .current_version
-
-            docker-compose down 
+            docker-compose down
             docker pull darrentiang0/esmos-odoo:${{ github.sha }}
-
             sed -i "s|image: darrentiang0/esmos-odoo:.*|image: darrentiang0/esmos-odoo:${{ github.sha }}|g" docker-compose.yml
-
             docker-compose up -d
+
+      # ============ ADD THIS NEW STEP HERE ============
+      - name: Smoke Test Gate - Production
+        if: github.event.action != 'alert-prod' && steps.check_commit.outputs.skip != 'true'
+        run: |
+          echo "Waiting 30s for Odoo to start..."
+          sleep 30
+          STATUS=$(curl -sk -o /dev/null -w "%{http_code}" https://odoo-production.centralindia.cloudapp.azure.com)
+          echo "HTTP Status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "Smoke test FAILED — triggering rollback via Logic App"
+            curl -X POST "${{ secrets.LOGIC_APP_PROD_URL }}" \
+              -H "Content-Type: application/json" \
+              -d '{"action": "alert-prod"}'
+            exit 1
+          fi
+          echo "Smoke test PASSED — Odoo is healthy"
+      # ============ END OF NEW STEP ============
 
       - name: Rollback on Alert
         if: github.event.action == 'alert-prod'
@@ -168,12 +192,10 @@ jobs:
           key: ${{ secrets.PRODUCTION_KEY }}
           script: |
             cd ~/esmos-odoo
-
             if [ ! -f .previous_version ]; then
               echo "No previous version found, aborting rollback"
               exit 1
             fi
-
             if [ -f .last_deploy_time ]; then
               LAST_DEPLOY=$(cat .last_deploy_time)
               NOW=$(date +%s)
@@ -183,11 +205,9 @@ jobs:
                 exit 0
               fi
             fi
-
             PREV_SHA=$(cat .previous_version)
             echo "Rolling back to $PREV_SHA"
             echo "$PREV_SHA" > .current_version
-
             docker-compose down
             docker pull darrentiang0/esmos-odoo:$PREV_SHA
             sed -i "s|image: darrentiang0/esmos-odoo:.*|image: darrentiang0/esmos-odoo:$PREV_SHA|g" docker-compose.yml
