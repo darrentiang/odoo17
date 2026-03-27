@@ -29,6 +29,7 @@ RUN echo "[options]" > /etc/odoo/odoo.conf && \
     echo "db_maxconn = 64" >> /etc/odoo/odoo.conf && \
     echo "workers = 2" >> /etc/odoo/odoo.conf && \
     echo "max_cron_threads = 1" >> /etc/odoo/odoo.conf && \
+    echo "proxy_mode = True" >> /etc/odoo/odoo.conf && \
     echo "admin_passwd = 214Odoo"
 
 RUN chown -R odoo:odoo /etc/odoo /mnt/extra-addons /var/lib/odoo/filestore
