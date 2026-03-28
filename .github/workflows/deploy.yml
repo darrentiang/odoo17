@@ -66,6 +66,9 @@ jobs:
             if [ -f .current_version ]; then
               cp .current_version .previous_version
             fi
+            if [ -f docker-compose.yml ]; then
+              cp docker-compose.yml .previous_docker_compose
+            fi
             date +%s > .last_deploy_time
             echo "${{ github.sha }}" > .current_version
             docker-compose down
@@ -114,6 +117,10 @@ jobs:
             PREV_SHA=$(cat .previous_version)
             echo "Rolling back to $PREV_SHA"
             echo "$PREV_SHA" > .current_version
+            if [ -f .previous_docker_compose ]; then
+              cp .previous_docker_compose docker-compose.yml
+              echo "Restored previous docker-compose.yml"
+            fi
             docker-compose down
             docker pull darrentiang0/esmos-odoo:$PREV_SHA
             sed -i "s|image: darrentiang0/esmos-odoo:.*|image: darrentiang0/esmos-odoo:$PREV_SHA|g" docker-compose.yml
@@ -176,6 +183,9 @@ jobs:
             if [ -f .current_version ]; then
               cp .current_version .previous_version
             fi
+            if [ -f docker-compose.yml ]; then
+              cp docker-compose.yml .previous_docker_compose
+            fi
             date +%s > .last_deploy_time
             echo "${{ github.sha }}" > .current_version
             docker-compose down
@@ -224,6 +234,10 @@ jobs:
             PREV_SHA=$(cat .previous_version)
             echo "Rolling back to $PREV_SHA"
             echo "$PREV_SHA" > .current_version
+            if [ -f .previous_docker_compose ]; then
+              cp .previous_docker_compose docker-compose.yml
+              echo "Restored previous docker-compose.yml"
+            fi
             docker-compose down
             docker pull darrentiang0/esmos-odoo:$PREV_SHA
             sed -i "s|image: darrentiang0/esmos-odoo:.*|image: darrentiang0/esmos-odoo:$PREV_SHA|g" docker-compose.yml
