@@ -44,6 +44,16 @@ jobs:
             darrentiang0/esmos-odoo:latest
             darrentiang0/esmos-odoo:${{ github.sha }}
 
+      - name: Copy docker-compose to Staging
+        if: github.event.action != 'alert-staging' && steps.check_commit.outputs.skip != 'true'
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: azureuser
+          key: ${{ secrets.STAGING_KEY }}
+          source: "docker-compose.yml"
+          target: "/home/azureuser/esmos-odoo/"
+
       - name: Deploy to Staging
         if: github.event.action != 'alert-staging' && steps.check_commit.outputs.skip != 'true'
         uses: appleboy/ssh-action@v1.0.0
@@ -63,7 +73,6 @@ jobs:
             sed -i "s|image: darrentiang0/esmos-odoo:.*|image: darrentiang0/esmos-odoo:${{ github.sha }}|g" docker-compose.yml
             docker-compose up -d
 
-      # ============ ADD THIS NEW STEP HERE ============
       - name: Smoke Test Gate - Staging
         if: github.event.action != 'alert-staging' && steps.check_commit.outputs.skip != 'true'
         run: |
@@ -79,7 +88,6 @@ jobs:
             exit 1
           fi
           echo "Smoke test PASSED — Odoo is healthy"
-      # ============ END OF NEW STEP ============
 
       - name: Rollback on Alert
         if: github.event.action == 'alert-staging'
@@ -146,6 +154,16 @@ jobs:
             darrentiang0/esmos-odoo:latest
             darrentiang0/esmos-odoo:${{ github.sha }}
 
+      - name: Copy docker-compose to Production
+        if: github.event.action != 'alert-prod' && steps.check_commit.outputs.skip != 'true'
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: azureuser
+          key: ${{ secrets.PRODUCTION_KEY }}
+          source: "docker-compose.yml"
+          target: "/home/azureuser/esmos-odoo/"
+
       - name: Deploy to Production
         if: github.event.action != 'alert-prod' && steps.check_commit.outputs.skip != 'true'
         uses: appleboy/ssh-action@v1.0.0
@@ -165,7 +183,6 @@ jobs:
             sed -i "s|image: darrentiang0/esmos-odoo:.*|image: darrentiang0/esmos-odoo:${{ github.sha }}|g" docker-compose.yml
             docker-compose up -d
 
-      # ============ ADD THIS NEW STEP HERE ============
       - name: Smoke Test Gate - Production
         if: github.event.action != 'alert-prod' && steps.check_commit.outputs.skip != 'true'
         run: |
@@ -181,7 +198,6 @@ jobs:
             exit 1
           fi
           echo "Smoke test PASSED — Odoo is healthy"
-      # ============ END OF NEW STEP ============
 
       - name: Rollback on Alert
         if: github.event.action == 'alert-prod'
