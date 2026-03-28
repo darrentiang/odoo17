@@ -82,6 +82,7 @@ jobs:
             fi
             date +%s > .last_deploy_time
             echo "${{ github.sha }}" > .current_version
+            sed -i "s|PLACEHOLDER|${{ secrets.DB_PASSWORD }}|g" docker-compose.yml
             docker-compose down
             docker pull darrentiang0/esmos-odoo:${{ github.sha }}
             sed -i "s|image: darrentiang0/esmos-odoo:.*|image: darrentiang0/esmos-odoo:${{ github.sha }}|g" docker-compose.yml
@@ -210,6 +211,7 @@ jobs:
             fi
             date +%s > .last_deploy_time
             echo "${{ github.sha }}" > .current_version
+            sed -i "s|PLACEHOLDER|${{ secrets.DB_PASSWORD }}|g" docker-compose.yml
             docker-compose down
             docker pull darrentiang0/esmos-odoo:${{ github.sha }}
             sed -i "s|image: darrentiang0/esmos-odoo:.*|image: darrentiang0/esmos-odoo:${{ github.sha }}|g" docker-compose.yml
