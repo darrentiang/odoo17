@@ -154,14 +154,14 @@ jobs:
             darrentiang0/esmos-odoo:latest
             darrentiang0/esmos-odoo:${{ github.sha }}
 
-      - name: Copy docker-compose to Production
+      - name: Copy configs to Production
         if: github.event.action != 'alert-prod' && steps.check_commit.outputs.skip != 'true'
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.PRODUCTION_HOST }}
           username: azureuser
           key: ${{ secrets.PRODUCTION_KEY }}
-          source: "docker-compose.yml"
+          source: "docker-compose.yml,nginx/nginx.conf"
           target: "/home/azureuser/esmos-odoo/"
 
       - name: Deploy to Production
