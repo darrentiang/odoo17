@@ -6,7 +6,7 @@ services:
     depends_on:
       - db
     expose:
-      - "8069"
+      - "9999"
     volumes:
       - odoo-web-data:/var/lib/odoo
     environment:
