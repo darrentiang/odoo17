@@ -36,3 +36,5 @@ RUN chown -R odoo:odoo /etc/odoo /mnt/extra-addons /var/lib/odoo/filestore
 RUN chmod 755 /etc/odoo /mnt/extra-addons /var/lib/odoo/filestore
 
 USER odoo
+
+ENV ODOO_RC=/nonexistent/path/odoo.conf
