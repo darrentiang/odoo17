@@ -44,6 +44,20 @@ jobs:
             darrentiang0/esmos-odoo:latest
             darrentiang0/esmos-odoo:${{ github.sha }}
 
+      - name: Backup current config on Staging
+        if: github.event.action != 'alert-staging' && steps.check_commit.outputs.skip != 'true'
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: azureuser
+          key: ${{ secrets.STAGING_KEY }}
+          script: |
+            cd ~/esmos-odoo
+            if [ -f docker-compose.yml ]; then
+              cp docker-compose.yml .previous_docker_compose
+              echo "Backed up current docker-compose.yml"
+            fi
+
       - name: Copy docker-compose to Staging
         if: github.event.action != 'alert-staging' && steps.check_commit.outputs.skip != 'true'
         uses: appleboy/scp-action@v0.1.7
@@ -65,9 +79,6 @@ jobs:
             cd ~/esmos-odoo
             if [ -f .current_version ]; then
               cp .current_version .previous_version
-            fi
-            if [ -f docker-compose.yml ]; then
-              cp docker-compose.yml .previous_docker_compose
             fi
             date +%s > .last_deploy_time
             echo "${{ github.sha }}" > .current_version
@@ -161,6 +172,20 @@ jobs:
             darrentiang0/esmos-odoo:latest
             darrentiang0/esmos-odoo:${{ github.sha }}
 
+      - name: Backup current config on Production
+        if: github.event.action != 'alert-prod' && steps.check_commit.outputs.skip != 'true'
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: azureuser
+          key: ${{ secrets.PRODUCTION_KEY }}
+          script: |
+            cd ~/esmos-odoo
+            if [ -f docker-compose.yml ]; then
+              cp docker-compose.yml .previous_docker_compose
+              echo "Backed up current docker-compose.yml"
+            fi
+
       - name: Copy configs to Production
         if: github.event.action != 'alert-prod' && steps.check_commit.outputs.skip != 'true'
         uses: appleboy/scp-action@v0.1.7
@@ -182,9 +207,6 @@ jobs:
             cd ~/esmos-odoo
             if [ -f .current_version ]; then
               cp .current_version .previous_version
-            fi
-            if [ -f docker-compose.yml ]; then
-              cp docker-compose.yml .previous_docker_compose
             fi
             date +%s > .last_deploy_time
             echo "${{ github.sha }}" > .current_version
