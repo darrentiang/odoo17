@@ -12,7 +12,7 @@ services:
     environment:
       - HOST=db
       - USER=odoo
-      - PASSWORD=wrongpassword
+      - PASSWORD=Odoo214
 
   db:
     image: postgres:15
