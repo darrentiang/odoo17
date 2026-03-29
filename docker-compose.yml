@@ -13,7 +13,7 @@ services:
       - HOST=db
       - USER=odoo
       - PASSWORD=DB_PASSWORD
-
+ 
   db:
     image: postgres:15
     restart: unless-stopped
