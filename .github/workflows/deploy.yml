@@ -135,6 +135,7 @@ jobs:
               cp .previous_docker_compose docker-compose.yml
               echo "Restored previous docker-compose.yml"
             fi
+            sed -i "s|DB_PASSWORD|${{ secrets.DB_PASSWORD }}|g" docker-compose.yml
             docker-compose down
             docker pull darrentiang0/esmos-odoo:$PREV_SHA
             sed -i "s|image: darrentiang0/esmos-odoo:.*|image: darrentiang0/esmos-odoo:$PREV_SHA|g" docker-compose.yml
@@ -213,7 +214,7 @@ jobs:
             fi
             date +%s > .last_deploy_time
             echo "${{ github.sha }}" > .current_version
-            sed -i "s|PLACEHOLDER|${{ secrets.DB_PASSWORD }}|g" docker-compose.yml
+            sed -i "s|DB_PASSWORD|${{ secrets.DB_PASSWORD }}|g" docker-compose.yml
             docker-compose down
             docker pull darrentiang0/esmos-odoo:${{ github.sha }}
             sed -i "s|image: darrentiang0/esmos-odoo:.*|image: darrentiang0/esmos-odoo:${{ github.sha }}|g" docker-compose.yml
@@ -223,7 +224,7 @@ jobs:
         if: github.event.action != 'alert-prod' && steps.check_commit.outputs.skip != 'true'
         run: |
           echo "Waiting 1m for Odoo to start..."
-          sleep 1m
+          sleep 60
           STATUS=$(curl -sk -o /dev/null -w "%{http_code}" https://odoo-production.centralindia.cloudapp.azure.com)
           echo "HTTP Status: $STATUS"
           if [ "$STATUS" != "200" ]; then
@@ -266,6 +267,7 @@ jobs:
               cp .previous_docker_compose docker-compose.yml
               echo "Restored previous docker-compose.yml"
             fi
+            sed -i "s|DB_PASSWORD|${{ secrets.DB_PASSWORD }}|g" docker-compose.yml
             docker-compose down
             docker pull darrentiang0/esmos-odoo:$PREV_SHA
             sed -i "s|image: darrentiang0/esmos-odoo:.*|image: darrentiang0/esmos-odoo:$PREV_SHA|g" docker-compose.yml
