@@ -91,8 +91,8 @@ jobs:
       - name: Smoke Test Gate - Staging
         if: github.event.action != 'alert-staging' && steps.check_commit.outputs.skip != 'true'
         run: |
-          echo "Waiting 30s for Odoo to start..."
-          sleep 30
+          echo "Waiting 1m for Odoo to start..."
+          sleep 60
           STATUS=$(curl -sk -o /dev/null -w "%{http_code}" https://odoo-staging.centralindia.cloudapp.azure.com)
           echo "HTTP Status: $STATUS"
           if [ "$STATUS" != "200" ]; then
@@ -222,8 +222,8 @@ jobs:
       - name: Smoke Test Gate - Production
         if: github.event.action != 'alert-prod' && steps.check_commit.outputs.skip != 'true'
         run: |
-          echo "Waiting 30s for Odoo to start..."
-          sleep 30
+          echo "Waiting 1m for Odoo to start..."
+          sleep 1m
           STATUS=$(curl -sk -o /dev/null -w "%{http_code}" https://odoo-production.centralindia.cloudapp.azure.com)
           echo "HTTP Status: $STATUS"
           if [ "$STATUS" != "200" ]; then
