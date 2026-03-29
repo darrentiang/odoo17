@@ -121,7 +121,7 @@ jobs:
               LAST_DEPLOY=$(cat .last_deploy_time)
               NOW=$(date +%s)
               DIFF=$((NOW - LAST_DEPLOY))
-              if [ $DIFF -gt 60 ]; then
+              if [ $DIFF -gt 3600 ]; then
                 echo "Alert is not within 1 hour of last deployment. Restarting Container"
                 docker-compose down
                 docker-compose up -d
@@ -253,7 +253,7 @@ jobs:
               LAST_DEPLOY=$(cat .last_deploy_time)
               NOW=$(date +%s)
               DIFF=$((NOW - LAST_DEPLOY))
-              if [ $DIFF -gt 60 ]; then
+              if [ $DIFF -gt 3600 ]; then
                 echo "Alert is not within 1 hour of last deployment. Restarting Container"
                 docker-compose down
                 docker-compose up -d
